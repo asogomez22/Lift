@@ -12,7 +12,7 @@ Variables minimas:
 - `APP_ENV=production`
 - `APP_DEBUG=false`
 - `APP_URL=https://tu-dominio`
-- `APP_KEY=base64:...`
+- `APP_KEY=base64:...` recomendado para mantener sesiones/cookies estables entre despliegues
 - `DB_CONNECTION=sqlite`
 - `DB_DATABASE=/var/www/html/database/database.sqlite`
 - `FILESYSTEM_DISK=public`
@@ -20,9 +20,12 @@ Variables minimas:
 - `CACHE_STORE=file`
 - `QUEUE_CONNECTION=sync`
 
-Variable opcional:
+Variables opcionales:
 
-- `RUN_MIGRATIONS=true` para ejecutar `php artisan migrate --force` al arrancar.
+- `RUN_MIGRATIONS=true` para ejecutar `php artisan migrate --force` al arrancar con bases no SQLite.
+
+Con SQLite, el contenedor ejecuta migraciones al arrancar para evitar una base vacia sin tablas.
+Si no se define `APP_KEY`, el contenedor genera una clave en `.env` para evitar errores 500 por clave de aplicacion ausente.
 
 Puerto expuesto:
 
