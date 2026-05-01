@@ -76,7 +76,11 @@
 </style>
 
 @php
-  $clients = \App\Models\Client::ordered()->get();
+  try {
+    $clients = \App\Models\Client::ordered()->get();
+  } catch (\Throwable) {
+    $clients = collect();
+  }
 @endphp
 
 <section class="py-24 bg-[#f8fafc] overflow-hidden">

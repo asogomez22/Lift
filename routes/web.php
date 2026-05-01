@@ -1,55 +1,63 @@
 <?php
 
 use App\Http\Controllers\ProfileController;
+use App\Models\Document;
+use App\Models\Page;
+use App\Models\Project;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
-    $page = \App\Models\Page::with('contentBlocks')->where('slug', 'home')->firstOrCreate([
-        'slug' => 'home'
-    ], [
-        'name' => 'Inicio'
-    ]);
+    $page = Page::resolvePublicPage('home', 'Inicio');
 
     return view('welcome', compact('page'));
 });
 
 Route::get('/formacion', function () {
-    $page = \App\Models\Page::with('contentBlocks')->where('slug', 'formacion')->firstOrCreate([
-        'slug' => 'formacion'
-    ], [
-        'name' => 'Formación'
-    ]);
-    $documents = \App\Models\Document::where('section', 'formacion')->where('is_visible', true)->latest()->get();
+    $page = Page::resolvePublicPage('formacion', 'Formacion');
+
+    try {
+        $documents = Document::where('section', 'formacion')->where('is_visible', true)->latest()->get();
+    } catch (\Throwable) {
+        $documents = collect();
+    }
+
     return view('formacion', compact('documents', 'page'));
 })->name('formacion');
 
 Route::get('/ingenieria', function () {
-    $page = \App\Models\Page::with('contentBlocks')->where('slug', 'ingenieria')->firstOrCreate([
-        'slug' => 'ingenieria'
-    ], [
-        'name' => 'Ingeniería'
-    ]);
+    $page = Page::resolvePublicPage('ingenieria', 'Ingenieria');
     return view('ingenieria', compact('page'));
 })->name('ingenieria');
 
 Route::get('/proyecto/{project}', function ($project) {
-    $project = \App\Models\Project::with('images')->where('slug', $project)->firstOrFail();
+    try {
+        $project = Project::with('images')->where('slug', $project)->firstOrFail();
+    } catch (\Throwable) {
+        abort(404);
+    }
+
     return view('projects.show', compact('project'));
 })->name('proyecto');
 
 Route::get('/estudios-tecnicos', function () {
-    $page = \App\Models\Page::with('contentBlocks')->where('slug', 'estudios-tecnicos')->firstOrCreate([
-        'slug' => 'estudios-tecnicos'
-    ], [
-        'name' => 'Estudios Técnicos'
-    ]);
+    $page = Page::resolvePublicPage('estudios-tecnicos', 'Estudios Tecnicos');
     return view('estudios-tecnicos', compact('page'));
 })->name('estudios.tecnicos');
 
 Route::get('/proyectos', function () {
-    $projects = \App\Models\Project::ordered()->get();
-    $documents = \App\Models\Document::where('section', 'proyectos')->where('is_visible', true)->get();
+    try {
+        $projects = Project::ordered()->get();
+    } catch (\Throwable) {
+        $projects = collect();
+    }
+
+    try {
+        $documents = Document::where('section', 'proyectos')->where('is_visible', true)->get();
+    } catch (\Throwable) {
+        $documents = collect();
+    }
+
     return view('proyectos', compact('projects', 'documents'));
 })->name('proyectos');
 
@@ -65,7 +73,7 @@ Route::get('/clear-cache', function () {
     Artisan::call('config:clear');
     Artisan::call('view:clear');
     Artisan::call('route:clear');
-    return "Caché de producción borrada.";
+    return "Cache de produccion borrada.";
 })->middleware('auth');
 
 Route::get('/contacto', function () {
@@ -73,20 +81,12 @@ Route::get('/contacto', function () {
 })->name('contacto');
 
 Route::get('/diseno-estructuras', function () {
-    $page = \App\Models\Page::with('contentBlocks')->where('slug', 'diseno-estructuras')->firstOrCreate([
-        'slug' => 'diseno-estructuras'
-    ], [
-        'name' => 'Diseño de Estructuras'
-    ]);
+    $page = Page::resolvePublicPage('diseno-estructuras', 'Diseno de Estructuras');
     return view('diseno-estructuras', compact('page'));
 })->name('diseno-estructuras');
 
 Route::get('/descargas', function () {
-    $page = \App\Models\Page::with('contentBlocks')->where('slug', 'descargas')->firstOrCreate([
-        'slug' => 'descargas'
-    ], [
-        'name' => 'Descargas'
-    ]);
+    $page = Page::resolvePublicPage('descargas', 'Descargas');
     return view('descargas', compact('page'));
 })->name('descargas');
 
@@ -112,12 +112,10 @@ Route::middleware('auth')->group(function () {
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 
-    // Admin Routes
     Route::resource('admin/messages', \App\Http\Controllers\Admin\MessageController::class)->except(['create', 'store', 'edit', 'update']);
     Route::resource('admin/documents', \App\Http\Controllers\Admin\DocumentController::class)->except(['show']);
     Route::patch('admin/documents/{document}/toggle', [\App\Http\Controllers\Admin\DocumentController::class, 'toggleVisibility'])->name('documents.toggle');
 
-    // Dedicated routes for AJAX block image uploads
     Route::post('admin/pages/{page}/blocks/{block}/image', [\App\Http\Controllers\Admin\PageController::class, 'uploadBlockImage'])->name('pages.blocks.image.upload');
     Route::delete('admin/pages/{page}/blocks/{block}/image', [\App\Http\Controllers\Admin\PageController::class, 'deleteBlockImage'])->name('pages.blocks.image.delete');
 
@@ -138,7 +136,6 @@ Route::middleware('auth')->group(function () {
     Route::patch('admin/formulas/{formula}/toggle', [\App\Http\Controllers\Admin\FormulaController::class, 'toggleActive'])->name('formulas.toggle');
 });
 
-// Dynamic XML Sitemap
 Route::get('/sitemap.xml', function () {
     $urls = [
         ['loc' => url('/'), 'priority' => '1.0', 'changefreq' => 'weekly'],
@@ -153,9 +150,8 @@ Route::get('/sitemap.xml', function () {
         ['loc' => url('/contacto'), 'priority' => '0.7', 'changefreq' => 'yearly'],
     ];
 
-    // Add individual project pages (safe — if DB fails, skip)
     try {
-        $projects = \App\Models\Project::whereNotNull('slug')->get();
+        $projects = Project::whereNotNull('slug')->get();
         foreach ($projects as $project) {
             $urls[] = [
                 'loc' => url("/proyecto/{$project->slug}"),
@@ -163,8 +159,8 @@ Route::get('/sitemap.xml', function () {
                 'changefreq' => 'monthly',
             ];
         }
-    } catch (\Exception $e) {
-        // DB unavailable — serve static URLs only
+    } catch (\Throwable) {
+        // Serve static URLs when the database is not ready.
     }
 
     $content = view('sitemap', compact('urls'))->render();

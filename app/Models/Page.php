@@ -3,6 +3,8 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Schema;
 
 class Page extends Model
 {
@@ -11,6 +13,43 @@ class Page extends Model
     public function contentBlocks()
     {
         return $this->hasMany(ContentBlock::class);
+    }
+
+    public static function hasContentTables(): bool
+    {
+        try {
+            return Schema::hasTable('pages') && Schema::hasTable('content_blocks');
+        } catch (\Throwable) {
+            return false;
+        }
+    }
+
+    public static function fallback(string $slug, string $name = ''): self
+    {
+        $page = new self([
+            'slug' => $slug,
+            'name' => $name,
+        ]);
+
+        $page->setRelation('contentBlocks', new Collection());
+
+        return $page;
+    }
+
+    public static function resolvePublicPage(string $slug, string $name = ''): self
+    {
+        if (!self::hasContentTables()) {
+            return self::fallback($slug, $name);
+        }
+
+        try {
+            return self::with('contentBlocks')->firstOrCreate(
+                ['slug' => $slug],
+                ['name' => $name]
+            );
+        } catch (\Throwable) {
+            return self::fallback($slug, $name);
+        }
     }
 
     public function getBlock($key, $default = '')

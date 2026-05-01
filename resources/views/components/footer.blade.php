@@ -5,7 +5,7 @@
       <div class="lg:col-span-4 space-y-6 md:space-y-8 text-center md:text-left">
         <a href="/" class="inline-block">
           <img
-            src="{{ optional(\App\Models\Page::where('slug', 'global')->first())->getBlockSrc('logo', 'img/branding/Asset-7-1.png') ?? \App\Models\Page::resolveBlockSrc('img/branding/Asset-7-1.png') }}"
+            src="{{ \App\Models\Page::resolvePublicPage('global', 'Global')->getBlockSrc('logo', 'img/branding/Asset-7-1.png') }}"
             alt="LIFT Logo" class="h-12 w-auto mx-auto md:mx-0 transition-transform duration-500 hover:scale-105" />
         </a>
         <h3 class="text-lg md:text-xl font-heading font-medium text-liftDark leading-relaxed max-w-sm mx-auto md:mx-0">
