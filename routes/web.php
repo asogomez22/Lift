@@ -5,6 +5,7 @@ use App\Models\Document;
 use App\Models\Page;
 use App\Models\Project;
 use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -93,6 +94,12 @@ Route::get('/descargas', function () {
 Route::get('/transportes-especiales', function () {
     return view('transportes-especiales');
 })->name('transportes-especiales');
+
+Route::get('/media/public/{path}', function (string $path) {
+    abort_unless(Storage::disk('public')->exists($path), 404);
+
+    return response()->file(Storage::disk('public')->path($path));
+})->where('path', '.*')->name('media.public');
 
 Route::get('/set-locale/{locale}', function ($locale) {
     if (in_array($locale, ['es', 'en'])) {

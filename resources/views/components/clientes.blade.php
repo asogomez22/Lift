@@ -81,6 +81,14 @@
   } catch (\Throwable) {
     $clients = collect();
   }
+
+  $clientLogoUrl = static function ($path) {
+    if (str_starts_with($path, 'clients/')) {
+      return route('media.public', ['path' => $path]);
+    }
+
+    return asset($path);
+  };
 @endphp
 
 <section class="py-24 bg-[#f8fafc] overflow-hidden">
@@ -110,11 +118,7 @@
           @for($i = 0; $i < 4; $i++)
             @foreach($clients as $client)
               <div class="logo-card">
-                @if(str_starts_with($client->logo_path, 'clients/'))
-                  <img src="{{ asset('storage/' . $client->logo_path) }}" alt="{{ $client->name }}" />
-                @else
-                  <img src="{{ asset($client->logo_path) }}" alt="{{ $client->name }}" />
-                @endif
+                <img src="{{ $clientLogoUrl($client->logo_path) }}" alt="{{ $client->name }}" />
               </div>
             @endforeach
           @endfor
@@ -124,11 +128,7 @@
           @for($i = 0; $i < 4; $i++)
             @foreach($clients as $client)
               <div class="logo-card">
-                @if(str_starts_with($client->logo_path, 'clients/'))
-                  <img src="{{ asset('storage/' . $client->logo_path) }}" alt="{{ $client->name }}" />
-                @else
-                  <img src="{{ asset($client->logo_path) }}" alt="{{ $client->name }}" />
-                @endif
+                <img src="{{ $clientLogoUrl($client->logo_path) }}" alt="{{ $client->name }}" />
               </div>
             @endforeach
           @endfor
@@ -144,11 +144,7 @@
           @for($i = 0; $i < 4; $i++)
             @foreach($clients->reverse() as $client)
               <div class="logo-card">
-                @if(str_starts_with($client->logo_path, 'clients/'))
-                  <img src="{{ asset('storage/' . $client->logo_path) }}" alt="{{ $client->name }}" />
-                @else
-                  <img src="{{ asset($client->logo_path) }}" alt="{{ $client->name }}" />
-                @endif
+                <img src="{{ $clientLogoUrl($client->logo_path) }}" alt="{{ $client->name }}" />
               </div>
             @endforeach
           @endfor
@@ -158,11 +154,7 @@
           @for($i = 0; $i < 4; $i++)
             @foreach($clients->reverse() as $client)
               <div class="logo-card">
-                @if(str_starts_with($client->logo_path, 'clients/'))
-                  <img src="{{ asset('storage/' . $client->logo_path) }}" alt="{{ $client->name }}" />
-                @else
-                  <img src="{{ asset($client->logo_path) }}" alt="{{ $client->name }}" />
-                @endif
+                <img src="{{ $clientLogoUrl($client->logo_path) }}" alt="{{ $client->name }}" />
               </div>
             @endforeach
           @endfor

@@ -8,7 +8,7 @@
 
   {{-- SEO Meta --}}
   <meta name="description"
-    content="{{ __('LIFT Ingeniería S.L. – Expertos en movimiento mecánico de cargas, ingeniería de grúas, formación técnica especializada y supervisión industrial. Más de 20 años de experiencia en la gran industria.') }}" />
+    content="{{ __('Ingeniería de grúas, formación técnica y supervisión industrial para movimientos mecánicos de cargas en la gran industria.') }}" />
   <meta name="author" content="LIFT Ingeniería S.L." />
   <meta name="theme-color" content="#ff3333" />
   <link rel="canonical" href="{{ url('/') }}" />

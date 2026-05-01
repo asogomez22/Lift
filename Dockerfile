@@ -36,7 +36,7 @@ RUN apt-get update && apt-get install -y \
     libicu-dev \
     libsqlite3-dev \
     && docker-php-ext-install pdo pdo_mysql pdo_sqlite zip intl \
-    && a2enmod rewrite headers \
+    && a2enmod rewrite headers deflate expires \
     && sed -ri -e 's!/var/www/html!${APACHE_DOCUMENT_ROOT}!g' /etc/apache2/sites-available/*.conf \
     && sed -ri -e 's!/var/www/!${APACHE_DOCUMENT_ROOT}!g' /etc/apache2/apache2.conf /etc/apache2/conf-available/*.conf \
     && rm -rf /var/lib/apt/lists/*
@@ -47,8 +47,11 @@ COPY . .
 COPY --from=vendor /app/vendor ./vendor
 COPY --from=frontend /app/public/build ./public/build
 COPY docker/entrypoint.sh /usr/local/bin/docker-entrypoint-laravel
+COPY docker/apache/lift.conf /etc/apache2/conf-available/lift.conf
 
 RUN chmod +x /usr/local/bin/docker-entrypoint-laravel \
+    && a2enconf lift \
+    && printf "expose_php=Off\n" > /usr/local/etc/php/conf.d/99-production.ini \
     && mkdir -p storage/framework/cache storage/framework/sessions storage/framework/views storage/logs bootstrap/cache database \
     && cp database/database.sqlite /tmp/database.sqlite.seed \
     && touch database/database.sqlite \
