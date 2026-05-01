@@ -37,6 +37,8 @@ Volumenes recomendados en Dokploy:
 - `/var/www/html/bootstrap/cache`
 - `/var/www/html/database`
 
+Si montas un volumen vacio en `/var/www/html/database`, el contenedor restaurara automaticamente el `database.sqlite` incluido en el proyecto en el primer arranque.
+
 ## Que Hace El Contenedor
 
 - Instala dependencias PHP sin `dev`

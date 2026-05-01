@@ -4,6 +4,11 @@ set -eu
 cd /var/www/html
 
 mkdir -p storage/framework/cache storage/framework/sessions storage/framework/views storage/logs bootstrap/cache database
+
+if [ ! -s database/database.sqlite ] && [ -f /tmp/database.sqlite.seed ]; then
+    cp /tmp/database.sqlite.seed database/database.sqlite
+fi
+
 touch database/database.sqlite
 chown -R www-data:www-data storage bootstrap/cache database
 

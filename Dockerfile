@@ -50,8 +50,9 @@ COPY docker/entrypoint.sh /usr/local/bin/docker-entrypoint-laravel
 
 RUN chmod +x /usr/local/bin/docker-entrypoint-laravel \
     && mkdir -p storage/framework/cache storage/framework/sessions storage/framework/views storage/logs bootstrap/cache database \
+    && cp database/database.sqlite /tmp/database.sqlite.seed \
     && touch database/database.sqlite \
-    && chown -R www-data:www-data storage bootstrap/cache
+    && chown -R www-data:www-data storage bootstrap/cache database
 
 EXPOSE 80
 
