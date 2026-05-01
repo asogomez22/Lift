@@ -1,0 +1,16 @@
+# https://www.robotstxt.org/robotstxt.html
+User-agent: *
+Disallow: /admin/
+Disallow: /dashboard
+Disallow: /dashboard/
+Disallow: /profile
+Disallow: /login
+Disallow: /register
+Disallow: /set-locale/
+Disallow: /clear-cache
+Disallow: /contact/send
+Disallow: /prueba
+Disallow: /prueba2
+
+# Sitemap
+Sitemap: https://lift-es.com/sitemap.xml
