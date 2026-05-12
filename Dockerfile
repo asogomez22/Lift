@@ -53,7 +53,7 @@ RUN chmod +x /usr/local/bin/docker-entrypoint-laravel \
     && a2enconf lift \
     && printf "expose_php=Off\n" > /usr/local/etc/php/conf.d/99-production.ini \
     && mkdir -p storage/framework/cache storage/framework/sessions storage/framework/views storage/logs bootstrap/cache database \
-    && cp database/database.sqlite /tmp/database.sqlite.seed \
+    && if [ -f database/database.sqlite ]; then cp database/database.sqlite /tmp/database.sqlite.seed; fi \
     && touch database/database.sqlite \
     && chown -R www-data:www-data storage bootstrap/cache database
 
