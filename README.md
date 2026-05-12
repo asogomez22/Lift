@@ -1,10 +1,65 @@
 # Lift
 
-Aplicacion Laravel preparada para desplegarse en Dokploy con Docker.
+Aplicacion Laravel preparada para CI/CD con GitHub Actions y despliegue Docker.
+
+## Que Incluye Para La AEA2
+
+- Proyecto Laravel con frontend compilado mediante Vite.
+- `Dockerfile` multi-stage: instala dependencias PHP, compila assets y sirve Laravel con Apache.
+- Workflow `.github/workflows/ci-cd.yml`:
+  - construye la imagen Docker en cada push o pull request contra `main`;
+  - arranca el contenedor y comprueba `/up`;
+  - publica la imagen en GitHub Container Registry en push a `main`;
+  - puede desplegar automaticamente a un VPS si se activan los secrets.
+
+Imagen generada:
+
+```text
+ghcr.io/asogomez22/lift:latest
+```
+
+## CI/CD Con GitHub Actions
+
+El workflow se ejecuta automaticamente al hacer `push` a `main`, al abrir una pull request o manualmente desde `Actions > CI/CD Docker > Run workflow`.
+
+Pasos que realiza:
+
+1. Descarga el repositorio.
+2. Construye la imagen Docker de produccion.
+3. Levanta un contenedor temporal con SQLite.
+4. Verifica que Laravel responde correctamente en `/up`.
+5. Publica `latest` y el tag corto del commit en `ghcr.io`.
+
+Para que la publicacion funcione, en el repositorio de GitHub debe estar permitido escribir paquetes con `GITHUB_TOKEN`:
+
+```text
+Settings > Actions > General > Workflow permissions > Read and write permissions
+```
+
+## Despliegue En VPS Con GitHub Actions
+
+El despliegue a VPS es opcional y se activa con una variable:
+
+```text
+Settings > Secrets and variables > Actions > Variables
+DEPLOY_VPS=true
+```
+
+Secrets necesarios:
+
+- `VPS_HOST`: IP o dominio del servidor.
+- `VPS_USER`: usuario SSH con permisos para ejecutar Docker.
+- `VPS_SSH_KEY`: clave privada SSH.
+- `APP_URL`: URL publica, por ejemplo `https://lift.tu-dominio.com`.
+- `APP_KEY`: clave Laravel estable, generada con `php artisan key:generate --show`.
+
+El servidor debe tener Docker instalado. El workflow descarga la ultima imagen y recrea el contenedor `lift` conservando tres volumenes:
+
+- `lift_storage`
+- `lift_database`
+- `lift_cache`
 
 ## Despliegue En Dokploy
-
-Dokploy puede construir directamente el repositorio usando el `Dockerfile` de este proyecto.
 
 Variables minimas:
 
@@ -46,6 +101,7 @@ Si montas un volumen vacio en `/var/www/html/database`, el contenedor restaurara
 - Sirve Laravel con Apache apuntando a `public/`
 - Recrea el symlink de `storage`
 - Limpia y regenera caches de Laravel al arrancar
+- Omite la cache de rutas si Laravel detecta rutas con closures
 
 ## Preparacion Recomendada
 
@@ -68,3 +124,12 @@ npm install
 npm run dev
 php artisan serve
 ```
+
+## Guion Corto Para El Video
+
+1. Mostrar la web funcionando en produccion.
+2. Enseñar el repositorio y explicar que es un proyecto Laravel propio.
+3. Abrir el `Dockerfile` y explicar que empaqueta Laravel, dependencias PHP, assets Vite y Apache.
+4. Abrir `Actions` en GitHub y mostrar el workflow ejecutado correctamente.
+5. Explicar que el workflow construye la imagen, hace smoke test y publica en GHCR.
+6. Si usas VPS, mostrar el contenedor `lift` corriendo con `docker ps` y la URL publica.
