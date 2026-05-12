@@ -48,16 +48,49 @@ DEPLOY_VPS=true
 Secrets necesarios:
 
 - `VPS_HOST`: IP o dominio del servidor.
+- `VPS_PORT`: puerto SSH del servidor si no usas `22` por defecto.
 - `VPS_USER`: usuario SSH con permisos para ejecutar Docker.
 - `VPS_SSH_KEY`: clave privada SSH.
 - `APP_URL`: URL publica, por ejemplo `https://lift.tu-dominio.com`.
 - `APP_KEY`: clave Laravel estable, generada con `php artisan key:generate --show`.
+- `DEPLOY_PORT`: puerto del VPS donde quedara publicada la app. En este servidor conviene `4321`.
+- `GHCR_USERNAME`: usuario de GitHub con acceso al paquete en `ghcr.io` si la imagen es privada.
+- `GHCR_TOKEN`: token de GitHub con permiso `read:packages` si la imagen es privada.
 
 El servidor debe tener Docker instalado. El workflow descarga la ultima imagen y recrea el contenedor `lift` conservando tres volumenes:
 
 - `lift_storage`
 - `lift_database`
 - `lift_cache`
+
+Si el paquete de `ghcr.io` es publico, `GHCR_USERNAME` y `GHCR_TOKEN` no son necesarios.
+Si el paquete es privado, el workflow iniciara sesion en `ghcr.io` dentro del VPS antes de hacer `docker pull`.
+
+## Lo Que Te Falta Configurar En GitHub
+
+1. Sube el repo a GitHub y trabaja sobre la rama `main`.
+2. En `Settings > Actions > General`, activa `Read and write permissions` para `GITHUB_TOKEN`.
+3. En `Settings > Secrets and variables > Actions > Variables`, crea `DEPLOY_VPS=true`.
+4. En `Settings > Secrets and variables > Actions > Secrets`, crea al menos:
+   - `VPS_HOST`
+   - `VPS_PORT`
+   - `VPS_USER`
+   - `VPS_SSH_KEY`
+   - `APP_URL`
+   - `APP_KEY`
+   - `DEPLOY_PORT`
+5. Si la imagen de `ghcr.io` va a ser privada, añade tambien:
+   - `GHCR_USERNAME`
+   - `GHCR_TOKEN`
+
+## Lo Que Te Falta Preparar En El VPS
+
+1. Instala Docker.
+2. Abre el puerto `80` o pon un proxy inverso delante del contenedor.
+3. Asegurate de que el usuario SSH puede ejecutar `docker`.
+4. Si usas imagen privada en `ghcr.io`, crea un token con `read:packages` y guardalo en los secrets del repo.
+
+Cuando hagas `push` a `main`, GitHub Actions construira la imagen, la probara, la subira a `ghcr.io` y despues actualizara el contenedor del servidor.
 
 ## Despliegue En Dokploy
 
