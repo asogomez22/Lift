@@ -51,7 +51,10 @@ if [ "${RUN_MIGRATIONS:-false}" = "true" ] || [ "$DB_CONNECTION_VALUE" = "sqlite
 fi
 
 php artisan config:cache
-php artisan route:cache
+if ! php artisan route:cache; then
+    echo "Route cache skipped because the application has non-cacheable routes."
+    php artisan route:clear || true
+fi
 php artisan view:cache
 
 exec "$@"
