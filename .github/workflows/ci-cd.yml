@@ -1,0 +1,129 @@
+name: CI/CD Docker
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  docker:
+    name: Build, smoke test and publish image
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Prepare image metadata
+        run: |
+          echo "IMAGE_NAME=ghcr.io/${GITHUB_REPOSITORY,,}" >> "$GITHUB_ENV"
+          echo "IMAGE_SHA=${GITHUB_SHA::12}" >> "$GITHUB_ENV"
+
+      - name: Build Docker image
+        run: |
+          docker build --pull \
+            --tag "$IMAGE_NAME:$IMAGE_SHA" \
+            --tag "$IMAGE_NAME:latest" \
+            .
+
+      - name: Smoke test Docker container
+        run: |
+          docker run --detach --name lift-ci --publish 8080:80 \
+            --env APP_ENV=production \
+            --env APP_DEBUG=false \
+            --env APP_KEY=base64:W4m2gH5PzxQ98X1/OG9ZJVwB4g9uVqrZ6+SBK9XkF4Q= \
+            --env APP_URL=http://127.0.0.1:8080 \
+            --env DB_CONNECTION=sqlite \
+            --env DB_DATABASE=/var/www/html/database/database.sqlite \
+            --env RUN_MIGRATIONS=true \
+            "$IMAGE_NAME:$IMAGE_SHA"
+
+          for attempt in $(seq 1 30); do
+            if curl --fail --silent --show-error --header 'X-Forwarded-Proto: https' http://127.0.0.1:8080/up; then
+              exit 0
+            fi
+
+            sleep 2
+          done
+
+          docker logs lift-ci
+          exit 1
+
+      - name: Login to GitHub Container Registry
+        if: github.event_name != 'pull_request'
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+
+      - name: Push Docker image
+        if: github.event_name != 'pull_request'
+        run: |
+          docker push "$IMAGE_NAME:$IMAGE_SHA"
+          docker push "$IMAGE_NAME:latest"
+
+      - name: Deploy to VPS
+        if: github.event_name != 'pull_request' && vars.DEPLOY_VPS == 'true'
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_PORT: ${{ secrets.VPS_PORT }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+          VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
+          APP_URL: ${{ secrets.APP_URL }}
+          APP_KEY: ${{ secrets.APP_KEY }}
+          DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
+          GHCR_USERNAME: ${{ secrets.GHCR_USERNAME }}
+          GHCR_TOKEN: ${{ secrets.GHCR_TOKEN }}
+        run: |
+          test -n "$VPS_HOST"
+          test -n "$VPS_USER"
+          test -n "$VPS_SSH_KEY"
+          test -n "$APP_URL"
+          test -n "$APP_KEY"
+          VPS_PORT="${VPS_PORT:-22}"
+          DEPLOY_PORT="${DEPLOY_PORT:-4321}"
+
+          mkdir -p ~/.ssh
+          printf '%s\n' "$VPS_SSH_KEY" > ~/.ssh/lift_deploy_key
+          chmod 600 ~/.ssh/lift_deploy_key
+          ssh-keyscan -p "$VPS_PORT" -H "$VPS_HOST" >> ~/.ssh/known_hosts
+
+          ssh -i ~/.ssh/lift_deploy_key -p "$VPS_PORT" "$VPS_USER@$VPS_HOST" \
+            "IMAGE_NAME='$IMAGE_NAME' APP_URL='$APP_URL' APP_KEY='$APP_KEY' DEPLOY_PORT='$DEPLOY_PORT' GHCR_USERNAME='$GHCR_USERNAME' GHCR_TOKEN='$GHCR_TOKEN' bash -s" <<'REMOTE'
+          set -eu
+
+          if [ -n "${GHCR_USERNAME:-}" ] || [ -n "${GHCR_TOKEN:-}" ]; then
+            test -n "${GHCR_USERNAME:-}"
+            test -n "${GHCR_TOKEN:-}"
+            printf '%s' "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USERNAME" --password-stdin
+          fi
+
+          docker pull "$IMAGE_NAME:latest"
+          docker stop lift || true
+          docker rm lift || true
+          docker run --detach \
+            --name lift \
+            --restart unless-stopped \
+            --publish "$DEPLOY_PORT:80" \
+            --env APP_NAME=Lift \
+            --env APP_ENV=production \
+            --env APP_DEBUG=false \
+            --env APP_URL="$APP_URL" \
+            --env APP_KEY="$APP_KEY" \
+            --env DB_CONNECTION=sqlite \
+            --env DB_DATABASE=/var/www/html/database/database.sqlite \
+            --env FILESYSTEM_DISK=public \
+            --env SESSION_DRIVER=file \
+            --env CACHE_STORE=file \
+            --env QUEUE_CONNECTION=sync \
+            --env RUN_MIGRATIONS=true \
+            --volume lift_storage:/var/www/html/storage \
+            --volume lift_database:/var/www/html/database \
+            --volume lift_cache:/var/www/html/bootstrap/cache \
+            "$IMAGE_NAME:latest"
+          REMOTE
